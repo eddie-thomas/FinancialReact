@@ -1,0 +1,18 @@
+# Defaults to being ignored
+/node_modules
+
+# Build files/dirs
+/dist/*
+/build/*
+/coverage/*
+
+# Type files
+**/*.d.ts
+
+# 3rd party libs
+/src/public/
+
+# No CSS
+**/*.css
+
+.husky
