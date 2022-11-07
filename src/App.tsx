@@ -1,7 +1,16 @@
 import "./App.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+import MainPage from "./pages/MainPage";
+import Sidebar from "./components/Sidebar";
 
-function App() {
-  return <div className="App"></div>;
+export default function App() {
+  return (
+    // Context & ThemeProvider
+    <>
+      <Sidebar />
+      <div className="main">
+        <MainPage />
+      </div>
+    </>
+  );
 }
-
-export default App;
