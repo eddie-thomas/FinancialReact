@@ -249,7 +249,7 @@ class WellsFargoPdfDocumentBaseClass:
 
             if len(row_dict) < 3:
                 raise Exception(
-                    f"Every row should parse to have at least three key, value pairs. This object:\n\n{row_json}\n\ndoesn't conform to our expectations."
+                    f"Every row should parse to have at least three key, value pairs. This object:\n\n{row_dict}\n\ndoesn't conform to our expectations."
                 )
             json_data.append(row_dict)
             # visualise(self.parsed_document, elements=row_elements)
