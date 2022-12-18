@@ -1,0 +1,4 @@
+py_pdf_parser
+matplotlib
+pyvoronoi
+shapely

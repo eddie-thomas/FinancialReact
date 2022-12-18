@@ -23,6 +23,8 @@
     "prepare": "husky install",
     "prepush": "npm run lint",
     "prettier": "prettier --write 'src/**/*'",
+    "python:init": "./scripts/python3/initialize.sh",
+    "python:test": "./scripts/python3/test-venv.sh",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
