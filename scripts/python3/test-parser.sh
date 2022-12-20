@@ -42,12 +42,8 @@ else
 fi
 
 # ================================
-# This is where we can run blocks of code via our virtual environment using node
-cd ./scripts
-
-# The first argument is meant to be the path to the PDF
-# The second argument is meant to be the type of PDF, "checking"|"credit"|"savings"
-$python_cmd test.py $1 $2
+# Arguments are injected in the `test.py` file.
+$python_cmd ./scripts/test.py
 # ================================
 
 echo

@@ -16,7 +16,18 @@ def throw(e):
     raise e
 
 
-def write_to_file(ACCT_NUM: int, JSON_TEXT: str):
+def write_to_file(ACCT_NUM: str, JSON_TEXT: str):
+    """Function that takes the parsed data and inserts it into the json file
+    that'll hold all our data. If file doesn't exist, an exception is thrown,
+    but if the `data.json` file is empty, then it'll initialize the json array.
+
+    TODO: Catch the error when trying to open a file that doesn't exist, and
+    create it then re-invoke the method.
+
+    Args:
+        ACCT_NUM (str): Account number
+        JSON_TEXT (str): Stringified JSON
+    """
     with open("./src/json/data.json", "r+") as file:
         # Read previous data, and possibly initialize previous if not already defined
         PREVIOUS_CONTENTS: list = json.loads("".join(file.readlines()) or "[]")

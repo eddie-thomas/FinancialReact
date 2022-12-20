@@ -2,13 +2,6 @@
 
 # Installs the Python dependencies.
 
-# This project has other dependencies too. For example, it depends on node and
-# probably others.
-#
-# If it seems better to have a way to install the dependency via this script than
-# to simply document that a dependency needs to be met before using the project,
-# then please update this script to do so.
-
 # Exit when any command fails
 set -e
 
