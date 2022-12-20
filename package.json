@@ -17,8 +17,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "lint": "eslint src/**/*",
-    "lint:fix": "eslint --fix src/**/*",
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint --fix src/**/*.{ts,tsx}",
     "precommit": "npm run lint:fix && npm run pretty",
     "prepare": "husky install",
     "prepush": "npm run lint",
@@ -33,8 +33,9 @@
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended",
+      "prettier"
     ]
   },
   "browserslist": {
