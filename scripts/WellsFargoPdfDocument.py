@@ -2,35 +2,40 @@ from py_pdf_parser.loaders import load_file
 from py_pdf_parser.visualise import visualise
 from py_pdf_parser.exceptions import NoElementFoundError
 from py_pdf_parser.components import ElementList, PDFElement
+from typing import Literal
 
 import json
 import re
 
 
 class WellsFargoPdfDocumentBaseClass:
-    """Wells Fargo PDF Doc base class
+    """Wells Fargo PDF Doc base class"""
 
-    Args:
-        file (str): The file path, either absolute or relative.
-        statement_type ("checking"|"credit"|"savings"): The file path, either absolute or relative.
-    """
-
-    def __init__(self, file, statement_type):
-        """_summary_
+    def __init__(
+        self,
+        file: str,
+        show: bool,
+        statement_type: Literal["checking", "credit", "savings"],
+    ):
+        """Initialize the base class
 
         Args:
-            file (_type_): _description_
-            statement_type (_type_): _description_
+            file (str): The file path, either absolute or relative.
+            show (bool): Should we visualize the PDF after getting the data.
+            statement_type ("checking"|"credit"|"savings"): The file path, either absolute or relative.
         """
+        self.account_num: None | int = None
         self.parsed_document = self._load_doc(file)
         self.statement_type = statement_type
         self.column_headers = self._get_column_headers_based_on_statement_type()
         self.number_of_rows = self._tag_dated_row_data()
+        self.show = show
 
-        # side-effects needing to happen
+        # Side-effects needing to happen.
         self._set_column_tags()
+        self._set_account_number()
 
-    # Private methods
+    # Private methods.
     def _get_column_headers_based_on_statement_type(self):
         """Method to get all the column header components, via a dictionary.
 
@@ -109,7 +114,10 @@ class WellsFargoPdfDocumentBaseClass:
         """
         for column_header_tag in sorted(self.column_headers.keys()):
             if column_header_tag in column_element.tags:
-                # Do extra work here if we are a description
+                # Do extra work here if we are a description.
+                if column_header_tag == "description":
+                    text = self._get_element_below_without_tag(row_element)
+                    return {column_header_tag: text}
                 return {column_header_tag: row_element.text()}
 
         # We want to raise an exception here to tell user that we cannot derive a dictionary
@@ -165,6 +173,43 @@ class WellsFargoPdfDocumentBaseClass:
 
         return json_row_data
 
+    def _get_element_below_without_tag(self, element: PDFElement):
+        """Method to get all of the elements below a specific one that hasn't been tagged yet.
+        After iterating through them, we append their text to ours initial element and return.
+
+        Note:
+            We could take the last found description of the page and make sure we only add
+            "potential" descriptions if there above the quote, "last" one, but it doesn't matter
+            because we'd loose out on any strings below the last one. In the current
+            implementation, we know we'll have every string, and maybe extras.
+            Better to have more than less.
+
+        Args:
+            element (PDFElement): The main element we're looking at
+
+        Returns:
+            text (str): Text of the given element, along with the text of any elements
+            below it that haven't been tagged yet.
+        """
+        text = element.text()
+        elements_below = self.parsed_document.elements.below(element)
+        for element_below in elements_below:
+            # This stops the text from getting in if we are looking at the bottom transaction
+            # I call this, good enough.
+            if not len(
+                self.parsed_document.elements.below(element_below).filter_by_tag(
+                    "identifiedAsRow"
+                )
+            ):
+                break
+            # If anything we think could be additional text, has a tag then it's not what we want.
+            if len(element_below.tags):
+                break
+            # Append text
+            text += element_below.text()
+            # Remove excess spacing.
+        return re.sub(" +", " ", text)
+
     def _load_doc(self, file):
         """Load the document, via the `py_pdf_parser.load_file()` method.
 
@@ -175,9 +220,7 @@ class WellsFargoPdfDocumentBaseClass:
         Returns:
             PDFDocument: A PDFDocument with the specified file loaded.
         """
-        return load_file(
-            file, {"line_overlap": 0.01, "line_margin": 0.01, "boxes_flow": None}
-        )
+        return load_file(file, {"line_overlap": 0.01, "line_margin": 0.01})
 
     def _set_column_tags(self):
         """Method to set our column tags.
@@ -187,6 +230,39 @@ class WellsFargoPdfDocumentBaseClass:
         for tag, elements in self.column_headers.items():
             elements.add_tag_to_elements(tag)
             elements.add_tag_to_elements("identifiedAsColumnHeader")
+
+    def _set_account_number(self):
+        """Method to set the classes account number
+
+        Note:
+            So far, in all cases, we have either `Account number` or `Account number:`
+            and the actual number is either part of the element or to the right of it.
+            I believe we can expect this until multiple issues arise.
+        """
+        # RegExp for getting PDFElement.
+        account_num = self.parsed_document.elements.filter_by_regex(
+            r"^account number[:]?", re.IGNORECASE
+        )[0]
+
+        # Try checking if the number is in the elements text.
+        try:
+            self.account_num = (
+                account_num.text()[-4:] if int(account_num.text()[-4:]) else None
+            )
+        except Exception:
+            # If not, try getting the element beside it and check if that is the number.
+            try:
+                account_num = self.parsed_document.elements.to_the_right_of(
+                    account_num
+                )[0]
+
+                self.account_num = (
+                    account_num.text()[-4:] if int(account_num.text()[-4:]) else None
+                )
+            # Otherwise raise exceptions.
+            except Exception as e:
+                print("\nCannot find account number.")
+                raise e
 
     def _tag_dated_row_data(self):
         """Method to tag our dated data, and the elements inline
@@ -208,24 +284,24 @@ class WellsFargoPdfDocumentBaseClass:
             # which has a transaction and post date which will catch on the date RegExp.
             if "identifiedAsRow" in dated_data.tags:
                 continue
-            # Tag row number
+            # Tag row number.
             dated_data.add_tag(f"row_{row_number}")
             self.parsed_document.elements.horizontally_in_line_with(
                 dated_data
             ).add_tag_to_elements(f"row_{row_number}")
-            # Tag that this has been identified as a row
+            # Tag that this has been identified as a row.
             dated_data.add_tag("identifiedAsRow")
             self.parsed_document.elements.horizontally_in_line_with(
                 dated_data
             ).add_tag_to_elements("identifiedAsRow")
 
-            # Increment row number
+            # Increment row number.
             row_number += 1
 
-        # Return the number of rows we find
+        # Return the number of rows we find.
         return row_number
 
-    # Public methods
+    # Public methods.
     def get_elements_by_tag(self, tag: str):
         """Method for getting elements via a specific tag.
 
@@ -247,12 +323,15 @@ class WellsFargoPdfDocumentBaseClass:
             row_elements = self.parsed_document.elements.filter_by_tag(row_tag)
             row_dict = self._get_dict_from_row_elements(row_elements)
 
+            visualise(
+                self.parsed_document, elements=row_elements
+            ) if self.show else None
+
             if len(row_dict) < 3:
-                raise Exception(
-                    f"Every row should parse to have at least three key, value pairs. This object:\n\n{row_dict}\n\ndoesn't conform to our expectations."
+                raise Warning(
+                    f"\n\nCommon issues could be wrongly assigning the `statement_type`, confirm the actual document is the correct statement type.\n\nEvery row should parse to have at least three key, value pairs. This object:\n\n\t{row_dict}\n\ndoesn't conform to our expectations."
                 )
             json_data.append(row_dict)
-            # visualise(self.parsed_document, elements=row_elements)
 
         return json.dumps(json_data)
 

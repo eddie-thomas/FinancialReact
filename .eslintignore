@@ -15,4 +15,7 @@
 # No CSS
 **/*.css
 
+# No JSON
+**/*.json
+
 .husky
