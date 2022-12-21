@@ -57,7 +57,7 @@ class WellsFargoPdfDocumentBaseClass:
                 "date": elements.filter_by_regex(r"^date$", re.IGNORECASE),
                 "check": elements.filter_by_regex(r"^check$", re.IGNORECASE),
                 "description": elements.filter_by_regex(
-                    r"^number description$", re.IGNORECASE
+                    r"^(number )?description$", re.IGNORECASE
                 ),
                 "deposits": elements.filter_by_regex(r"^deposits/$", re.IGNORECASE),
                 "withdrawals": elements.filter_by_regex(
@@ -246,6 +246,8 @@ class WellsFargoPdfDocumentBaseClass:
 
         # Try checking if the number is in the elements text.
         try:
+            # account_text = account_num.text()
+            # regex_number = re.match("(?<=account_number[:]?\s)\d*",account_text)
             self.account_num = (
                 account_num.text()[-4:] if int(account_num.text()[-4:]) else None
             )
