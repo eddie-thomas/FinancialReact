@@ -2,9 +2,8 @@
 
 A financial planner application meant for myself and keeping track of Wells Fargo credit/debit/savings accounts.
 
-Testing 
 
+Testing commit from new Linux Mint enviroment :)
+installing tkinter
 
-Testing from new Linux Mint env
-
-YOOOOOO
+Arch: `sudo pacman -S tk`
