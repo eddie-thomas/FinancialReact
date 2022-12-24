@@ -5,7 +5,7 @@ import json
 
 def test():
     PDF = WellsFargoPdfDocumentBaseClass(
-        "./scripts/test/document.pdf", False, "checking"
+        "./scripts/test/document1.pdf", False, "checking"
     )
     received = json.loads(PDF.get_json())
     expected = get_mocked_expected()

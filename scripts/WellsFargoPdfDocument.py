@@ -138,10 +138,25 @@ class WellsFargoPdfDocumentBaseClass:
             `text()` of the `row_element`.
         """
         try:
+            potential_column_header = (
+                self.parsed_document.elements.vertically_in_line_with(
+                    row_element
+                ).filter_by_tag("identifiedAsColumnHeader")
+            )
+            if potential_column_header.__len__() > 1:
+                print(f"This is an error {row_element.text()}")
             column_header = (
-                self.parsed_document.elements.vertically_in_line_with(row_element)
-                .filter_by_tag("identifiedAsColumnHeader")
-                .extract_single_element()
+                (
+                    potential_column_header.filter_by_tag(
+                        "check"
+                    ).extract_single_element()
+                    if row_element.text().isdigit()
+                    else potential_column_header.filter_by_tag(
+                        "description"
+                    ).extract_single_element()
+                )
+                if potential_column_header.__len__() > 1
+                else potential_column_header.extract_single_element()
             )
 
             return self._get_dict_from_column_and_row_element(
@@ -240,22 +255,25 @@ class WellsFargoPdfDocumentBaseClass:
             I believe we can expect this until multiple issues arise.
         """
         # RegExp for getting PDFElement.
-        account_num = self.parsed_document.elements.filter_by_regex(
+        account_num_elem = self.parsed_document.elements.filter_by_regex(
             r"^account number[:]?", re.IGNORECASE
         )[0]
 
-        # Try checking if the number is in the elements text.
         try:
-            # account_text = account_num.text()
-            # regex_number = re.match("(?<=account_number[:]?\s)\d*",account_text)
-            self.account_num = (
-                account_num.text()[-4:] if int(account_num.text()[-4:]) else None
-            )
+            # Try to parse account number into an int
+            account_num_elem_text = account_num_elem.text()
+
+            account_num = re.match(
+                r"(?:^account number[:]?)([\s\d]+)",
+                account_num_elem_text,
+                re.IGNORECASE,
+            ).group(1)
+            self.account_num = account_num if f"{int(account_num)}"[-4:] else None
         except Exception:
             # If not, try getting the element beside it and check if that is the number.
             try:
                 account_num = self.parsed_document.elements.to_the_right_of(
-                    account_num
+                    account_num_elem
                 )[0]
 
                 self.account_num = (
