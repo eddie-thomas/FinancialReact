@@ -253,6 +253,13 @@ class WellsFargoPdfDocumentBaseClass:
             So far, in all cases, we have either `Account number` or `Account number:`
             and the actual number is either part of the element or to the right of it.
             I believe we can expect this until multiple issues arise.
+
+            We throw an error the first time to escape the scenario when the account
+            number is `inside` the initial PDFElement we found. The second try-except
+            does the check for credits, which is assuming the number is inside a
+            PDFElement to the right of the element we initially found. Both scenarios
+            could apply to any type of statement. That is why there are multiple try-
+            catches.
         """
         # RegExp for getting PDFElement.
         account_num_elem = self.parsed_document.elements.filter_by_regex(
@@ -268,7 +275,7 @@ class WellsFargoPdfDocumentBaseClass:
                 account_num_elem_text,
                 re.IGNORECASE,
             ).group(1)
-            self.account_num = account_num if f"{int(account_num)}"[-4:] else None
+            self.account_num = account_num[-4:] if f"{int(account_num)}"[-4:] else None
         except Exception:
             # If not, try getting the element beside it and check if that is the number.
             try:

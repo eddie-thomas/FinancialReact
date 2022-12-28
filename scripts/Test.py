@@ -4,6 +4,8 @@ from WellsFargoPdfDocument import WellsFargoPdfDocumentBaseClass
 
 
 class TestClass:
+    """Test Class"""
+
     def __init__(self):
         """Initialize the Test class. Should only be used in development."""
         self.expected = self.get_mocked_expected()
