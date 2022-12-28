@@ -1,11 +1,14 @@
+import json
+import re
+
+from Exceptions import TooManyColumnsFoundError
+
 from py_pdf_parser.loaders import load_file
 from py_pdf_parser.visualise import visualise
 from py_pdf_parser.exceptions import NoElementFoundError
 from py_pdf_parser.components import ElementList, PDFElement
-from typing import Literal
 
-import json
-import re
+from typing import Literal
 
 
 class WellsFargoPdfDocumentBaseClass:
@@ -55,7 +58,6 @@ class WellsFargoPdfDocumentBaseClass:
         if type == "checking":
             return {
                 "date": elements.filter_by_regex(r"^date$", re.IGNORECASE),
-                "check": elements.filter_by_regex(r"^check$", re.IGNORECASE),
                 "description": elements.filter_by_regex(
                     r"^(number )?description$", re.IGNORECASE
                 ),
@@ -144,29 +146,27 @@ class WellsFargoPdfDocumentBaseClass:
                 ).filter_by_tag("identifiedAsColumnHeader")
             )
             if potential_column_header.__len__() > 1:
-                print(f"This is an error {row_element.text()}")
-            column_header = (
-                (
-                    potential_column_header.filter_by_tag(
-                        "check"
-                    ).extract_single_element()
-                    if row_element.text().isdigit()
-                    else potential_column_header.filter_by_tag(
-                        "description"
-                    ).extract_single_element()
+                # Visualize when there are too many columns
+                visualise(
+                    self.parsed_document, elements=potential_column_header
+                ) if self.show else None
+                raise TooManyColumnsFoundError(
+                    f"Too many column headers were found for this specific row element: {row_element.text()}"
                 )
-                if potential_column_header.__len__() > 1
-                else potential_column_header.extract_single_element()
-            )
+
+            column_header = potential_column_header.extract_single_element()
 
             return self._get_dict_from_column_and_row_element(
                 column_header, row_element
             )
 
         except NoElementFoundError:
+            # Visualize when there aren't any headers found, if this error becomes more common
             print(
                 f"\nCould not determine a column header!\nNo data returned for a known row: {row_element.text()}"
             )
+            return {}
+        except TooManyColumnsFoundError:
             return {}
 
     def _get_dict_from_row_elements(self, row_elements: ElementList):
@@ -343,15 +343,17 @@ class WellsFargoPdfDocumentBaseClass:
             row_elements = self.parsed_document.elements.filter_by_tag(row_tag)
             row_dict = self._get_dict_from_row_elements(row_elements)
 
-            visualise(
-                self.parsed_document, elements=row_elements
-            ) if self.show else None
-
-            if len(row_dict) < 3:
-                raise Warning(
-                    f"\n\nCommon issues could be wrongly assigning the `statement_type`, confirm the actual document is the correct statement type.\n\nEvery row should parse to have at least three key, value pairs. This object:\n\n\t{row_dict}\n\ndoesn't conform to our expectations."
-                )
-            json_data.append(row_dict)
+            try:
+                # Check if our row has enough data, if not then raise a warning
+                if len(row_dict) < 3:
+                    raise Warning(
+                        f"\n\nCommon issues could be: \n\t- wrongly assigning the `statement_type`, confirm the actual document is the correct statement type.\n\n\nEvery row should parse to have at least three key, value pairs. This object:\n\n\t{row_dict}\n\ndoesn't conform to our expectations."
+                    )
+                json_data.append(row_dict)
+            except Warning:
+                visualise(
+                    self.parsed_document, elements=row_elements
+                ) if self.show else None
 
         return json.dumps(json_data)
 

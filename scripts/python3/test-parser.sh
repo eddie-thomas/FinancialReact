@@ -42,8 +42,8 @@ else
 fi
 
 # ================================
-# Arguments are injected in the `test.py` file.
-$python_cmd ./scripts/test.py
+# Arguments are injected in the `Test.py` file.
+$python_cmd ./scripts/Test.py
 # ================================
 
 echo

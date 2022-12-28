@@ -1,28 +1,15 @@
 import json
 import sys
+
 from datetime import datetime
+from Exceptions import throw
 from WellsFargoPdfDocument import WellsFargoPdfDocumentBaseClass
-
-
-def throw(e):
-    """Raises an exception
-
-    Args:
-        e (Exception): The exception to raise
-
-    Raises:
-        e: The exception passed
-    """
-    raise e
 
 
 def write_to_file(ACCT_NUM: str, JSON_TEXT: str):
     """Function that takes the parsed data and inserts it into the json file
     that'll hold all our data. If file doesn't exist, an exception is thrown,
     but if the `data.json` file is empty, then it'll initialize the json array.
-
-    TODO: Catch the error when trying to open a file that doesn't exist, and
-    create it then re-invoke the method.
 
     Args:
         ACCT_NUM (str): Account number
@@ -76,6 +63,12 @@ if "__main__" == __name__:
         print("\nData already loaded.") if str(
             e
         ) == "I/O operation on closed file." else throw(e)
+    except FileNotFoundError:
+        # Catch the error when trying to open a file that doesn't exist, and
+        # create it then re-invoke the method.
+        new_file = open("./src/json/data.json", "w")
+        new_file.close()
+        write_to_file(ACCT_NUM, JSON_TEXT)
 
 
 # @see {https://pdfminersix.readthedocs.io/en/latest/reference/composable.html#laparams}
