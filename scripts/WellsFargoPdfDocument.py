@@ -1,11 +1,14 @@
+import json
+import re
+
+from Exceptions import TooManyColumnsFoundError
+
 from py_pdf_parser.loaders import load_file
 from py_pdf_parser.visualise import visualise
 from py_pdf_parser.exceptions import NoElementFoundError
 from py_pdf_parser.components import ElementList, PDFElement
-from typing import Literal
 
-import json
-import re
+from typing import Literal
 
 
 class WellsFargoPdfDocumentBaseClass:
@@ -55,9 +58,8 @@ class WellsFargoPdfDocumentBaseClass:
         if type == "checking":
             return {
                 "date": elements.filter_by_regex(r"^date$", re.IGNORECASE),
-                "check": elements.filter_by_regex(r"^check$", re.IGNORECASE),
                 "description": elements.filter_by_regex(
-                    r"^number description$", re.IGNORECASE
+                    r"^(number )?description$", re.IGNORECASE
                 ),
                 "deposits": elements.filter_by_regex(r"^deposits/$", re.IGNORECASE),
                 "withdrawals": elements.filter_by_regex(
@@ -138,20 +140,33 @@ class WellsFargoPdfDocumentBaseClass:
             `text()` of the `row_element`.
         """
         try:
-            column_header = (
-                self.parsed_document.elements.vertically_in_line_with(row_element)
-                .filter_by_tag("identifiedAsColumnHeader")
-                .extract_single_element()
+            potential_column_header = (
+                self.parsed_document.elements.vertically_in_line_with(
+                    row_element
+                ).filter_by_tag("identifiedAsColumnHeader")
             )
+            if potential_column_header.__len__() > 1:
+                # Visualize when there are too many columns
+                visualise(
+                    self.parsed_document, elements=potential_column_header
+                ) if self.show else None
+                raise TooManyColumnsFoundError(
+                    f"Too many column headers were found for this specific row element: {row_element.text()}"
+                )
+
+            column_header = potential_column_header.extract_single_element()
 
             return self._get_dict_from_column_and_row_element(
                 column_header, row_element
             )
 
         except NoElementFoundError:
+            # Visualize when there aren't any headers found, if this error becomes more common
             print(
                 f"\nCould not determine a column header!\nNo data returned for a known row: {row_element.text()}"
             )
+            return {}
+        except TooManyColumnsFoundError:
             return {}
 
     def _get_dict_from_row_elements(self, row_elements: ElementList):
@@ -238,22 +253,34 @@ class WellsFargoPdfDocumentBaseClass:
             So far, in all cases, we have either `Account number` or `Account number:`
             and the actual number is either part of the element or to the right of it.
             I believe we can expect this until multiple issues arise.
+
+            We throw an error the first time to escape the scenario when the account
+            number is `inside` the initial PDFElement we found. The second try-except
+            does the check for credits, which is assuming the number is inside a
+            PDFElement to the right of the element we initially found. Both scenarios
+            could apply to any type of statement. That is why there are multiple try-
+            catches.
         """
         # RegExp for getting PDFElement.
-        account_num = self.parsed_document.elements.filter_by_regex(
+        account_num_elem = self.parsed_document.elements.filter_by_regex(
             r"^account number[:]?", re.IGNORECASE
         )[0]
 
-        # Try checking if the number is in the elements text.
         try:
-            self.account_num = (
-                account_num.text()[-4:] if int(account_num.text()[-4:]) else None
-            )
+            # Try to parse account number into an int
+            account_num_elem_text = account_num_elem.text()
+
+            account_num = re.match(
+                r"(?:^account number[:]?)([\s\d]+)",
+                account_num_elem_text,
+                re.IGNORECASE,
+            ).group(1)
+            self.account_num = account_num[-4:] if f"{int(account_num)}"[-4:] else None
         except Exception:
             # If not, try getting the element beside it and check if that is the number.
             try:
                 account_num = self.parsed_document.elements.to_the_right_of(
-                    account_num
+                    account_num_elem
                 )[0]
 
                 self.account_num = (
@@ -323,15 +350,17 @@ class WellsFargoPdfDocumentBaseClass:
             row_elements = self.parsed_document.elements.filter_by_tag(row_tag)
             row_dict = self._get_dict_from_row_elements(row_elements)
 
-            visualise(
-                self.parsed_document, elements=row_elements
-            ) if self.show else None
-
-            if len(row_dict) < 3:
-                raise Warning(
-                    f"\n\nCommon issues could be wrongly assigning the `statement_type`, confirm the actual document is the correct statement type.\n\nEvery row should parse to have at least three key, value pairs. This object:\n\n\t{row_dict}\n\ndoesn't conform to our expectations."
-                )
-            json_data.append(row_dict)
+            try:
+                # Check if our row has enough data, if not then raise a warning
+                if len(row_dict) < 3:
+                    raise Warning(
+                        f"\n\nCommon issues could be: \n\t- wrongly assigning the `statement_type`, confirm the actual document is the correct statement type.\n\n\nEvery row should parse to have at least three key, value pairs. This object:\n\n\t{row_dict}\n\ndoesn't conform to our expectations."
+                    )
+                json_data.append(row_dict)
+            except Warning:
+                visualise(
+                    self.parsed_document, elements=row_elements
+                ) if self.show else None
 
         return json.dumps(json_data)
 
