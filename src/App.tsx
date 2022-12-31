@@ -22,6 +22,7 @@ import "./App.css";
 import {
   Context,
   defaultValue,
+  PageType,
   useContext,
   type ContextType,
 } from "./utils/Context";
@@ -43,11 +44,21 @@ const customTheme = createTheme({
             fontFamily: "Arsher",
           },
           "& .MuiTypography-h4": {
-            fontFamily: "Arsher, cursive",
+            fontFamily: "Arsher, Cursive",
           },
           "& .MuiDivider-root": {
             margin: "15px 5px",
             backgroundColor: "#fff",
+          },
+        },
+      },
+    },
+    MuiTableHead: {
+      styleOverrides: {
+        root: {
+          "& .MuiTableCell-root": {
+            backgroundColor: "rgba(255,255,255,0)",
+            backdropFilter: "blur(10px)",
           },
         },
       },
@@ -62,7 +73,7 @@ function App() {
       <ThemeProvider theme={customTheme}>
         <div className="App">
           <PureBar />
-          <PureBody />
+          {context.user && <PureBody />}
         </div>
       </ThemeProvider>
     </Context.Provider>
@@ -83,12 +94,12 @@ function Bar() {
   };
 
   const handleMeClick = () => {
-    app.setBody(<AccountPage />);
+    app.setBody(<AccountPage />, PageType.Account);
     handleMenuClose();
   };
 
   const handleTransactionsClick = () => {
-    app.setBody(<TransactionPage />);
+    app.setBody(<TransactionPage />, PageType.Transaction);
     handleMenuClose();
   };
 
@@ -115,7 +126,14 @@ function Bar() {
   return (
     <AppBar component="nav">
       <Toolbar>
-        <Typography variant="h5" sx={{ display: { xs: "none", sm: "block" } }}>
+        <Typography
+          variant="h5"
+          sx={{
+            display: { xs: "none", sm: "block" },
+            color: "#FCCC44",
+            textDecoration: "#D41C2C underline",
+          }}
+        >
           WELLS
           <br />
           FARGO
@@ -148,7 +166,17 @@ function Bar() {
               </Tooltip>
             </IconButton>
 
-            <IconButton onClick={handleProfileMenuOpen} size="large">
+            <IconButton
+              sx={{
+                borderRadius: 1,
+                ...(app.bodyType &&
+                  app.bodyType !== "upload" && {
+                    borderBottom: "3px solid #fff",
+                  }),
+              }}
+              onClick={handleProfileMenuOpen}
+              size="large"
+            >
               <AccountBoxIcon />
             </IconButton>
           </>
