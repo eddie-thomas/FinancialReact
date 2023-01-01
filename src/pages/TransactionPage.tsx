@@ -27,7 +27,10 @@ import {
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 
 import { useContext } from "../utils/Context";
-import { concatenateAccountTransactions } from "../utils/parse";
+import {
+  aggregateAmounts,
+  concatenateAccountTransactions,
+} from "../utils/parse";
 
 interface TransactionTableProps {
   account: string;
@@ -142,6 +145,7 @@ function TransactionPage() {
 
 function TransactionTable({ account }: TransactionTableProps) {
   const { data, titles } = concatenateAccountTransactions({ account });
+  const { balance, expense, revenue } = aggregateAmounts(data);
 
   return (
     <Paper
@@ -196,13 +200,43 @@ function TransactionTable({ account }: TransactionTableProps) {
         </Table>
       </TableContainer>
       <Box
-        sx={{
-          margin: (theme) => theme.spacing(5),
-          display: "flex",
-          justifyContent: "right",
-        }}
+        sx={(theme) => ({
+          margin: theme.spacing(5),
+          [theme.breakpoints.up("xs")]: {
+            justifyContent: "right",
+            display: "flex",
+          },
+          [theme.breakpoints.down("sm")]: {
+            display: "grid",
+            justifyContent: "center",
+            "& .MuiTypography-root": {
+              textAlign: "right",
+            },
+          },
+          "& .MuiTypography-root": {
+            borderRight: "1px solid #000",
+            pr: 1,
+            mr: 1,
+          },
+        })}
       >
-        <Typography>Total</Typography>
+        <Typography>
+          Revenue:&nbsp;<b>{revenue}</b>
+        </Typography>
+        <Typography>
+          Expense:&nbsp;<b>{expense}</b>
+        </Typography>
+        <Typography>
+          Balance:&nbsp;
+          <b
+            style={{
+              color:
+                balance === 0 ? "#649ff0" : balance > 0 ? "#79ea86" : "#e75757",
+            }}
+          >
+            {balance}
+          </b>
+        </Typography>
       </Box>
     </Paper>
   );

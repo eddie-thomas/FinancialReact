@@ -1,11 +1,61 @@
 import data from "../json/data.json";
 
+export type Transactions = Array<{ [key: string]: string }>;
+
+function aggregateAmounts(arrayOfTransactions: Transactions): {
+  balance: number;
+  expense: number;
+  revenue: number;
+} {
+  // const plusHeaders = ["credits", "deposits"];
+  // const minusHeaders = ["withdrawals", "charges"];
+  let revenue = 0;
+  let expense = 0;
+
+  arrayOfTransactions.forEach((obj) => {
+    const num = (str: string) => str.replaceAll(/,/g, "");
+    const increment: string | undefined =
+      obj.credits !== undefined
+        ? obj.credits
+        : obj.deposits !== undefined
+        ? obj.deposits
+        : undefined;
+
+    if (increment) {
+      // If we are an increment then add it to the total
+      revenue += parseFloat(num(increment));
+    } else {
+      const decrement: string | undefined =
+        obj.withdrawals !== undefined
+          ? obj.withdrawals
+          : obj.charges !== undefined
+          ? obj.charges
+          : undefined;
+      if (decrement === undefined)
+        throw Error(
+          `No charge or credit was determined for this specific transaction: ${JSON.stringify(
+            obj,
+            null,
+            4
+          )}`
+        );
+      expense += parseFloat(num(decrement));
+    }
+  });
+
+  return {
+    balance: Math.round((revenue - expense + Number.EPSILON) * 100) / 100,
+    expense: Math.round((expense + Number.EPSILON) * 100) / 100,
+    revenue: Math.round((revenue + Number.EPSILON) * 100) / 100,
+  };
+}
+
 function concatenateAccountTransactions({ account }: { account: string }): {
-  data: Array<{ [key: string]: string }>;
+  data: Transactions;
   titles: string[];
 } {
   let accountType;
-  const accountTransactions: Array<{ [key: string]: string }> = data
+  const accountTransactions: Transactions = data
     .filter((transaction) => transaction.account === account)
     .map((transaction) => {
       accountType = transaction.type;
@@ -33,7 +83,7 @@ function concatenateAccountTransactions({ account }: { account: string }): {
 }
 
 function deriveUniqueColumnHeaders(
-  arrayOfTransactions: Array<{ [key: string]: string }>
+  arrayOfTransactions: Transactions
 ): string[] {
   const redundantHeaders = ["reference", "trans"];
   const uniqueHeaders = new Set(
@@ -44,4 +94,8 @@ function deriveUniqueColumnHeaders(
   );
 }
 
-export { concatenateAccountTransactions, deriveUniqueColumnHeaders };
+export {
+  aggregateAmounts,
+  concatenateAccountTransactions,
+  deriveUniqueColumnHeaders,
+};
