@@ -5,6 +5,7 @@
 /.pnp
 .pnp.js
 .venv
+.vscode
 __pycache__
 
 # testing
