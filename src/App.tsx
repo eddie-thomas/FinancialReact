@@ -29,6 +29,7 @@ import {
 
 import TransactionPage from "./pages/TransactionPage";
 import AccountPage from "./pages/AccountPage";
+import LoginDialog from "./pages/LoginDialog";
 
 const customTheme = createTheme({
   components: {
@@ -71,6 +72,15 @@ function App() {
   return (
     <Context.Provider value={[context, setContext]}>
       <ThemeProvider theme={customTheme}>
+        <div>
+          {/* Dialogs */}
+          <LoginDialog
+            open={context.loginDialogOpen}
+            onClose={() =>
+              setContext((prev) => ({ ...prev, loginDialogOpen: false }))
+            }
+          />
+        </div>
         <div className="App">
           <PureBar />
           {context.user && <PureBody />}
@@ -182,7 +192,7 @@ function Bar() {
           </>
         ) : (
           <>
-            <Button onClick={app.handleLogIn}>Log in</Button>
+            <Button onClick={app.handleAttemptLogin}>Log in</Button>
           </>
         )}
       </Toolbar>

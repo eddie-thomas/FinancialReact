@@ -3,9 +3,9 @@ import data from "../json/data.json";
 export type Transactions = Array<{ [key: string]: string }>;
 
 function aggregateAmounts(arrayOfTransactions: Transactions): {
-  balance: number;
-  expense: number;
-  revenue: number;
+  balance: string;
+  expense: string;
+  revenue: string;
 } {
   // const plusHeaders = ["credits", "deposits"];
   // const minusHeaders = ["withdrawals", "charges"];
@@ -44,9 +44,9 @@ function aggregateAmounts(arrayOfTransactions: Transactions): {
   });
 
   return {
-    balance: Math.round((revenue - expense + Number.EPSILON) * 100) / 100,
-    expense: Math.round((expense + Number.EPSILON) * 100) / 100,
-    revenue: Math.round((revenue + Number.EPSILON) * 100) / 100,
+    balance: roundAndStringify(revenue - expense),
+    expense: roundAndStringify(expense),
+    revenue: roundAndStringify(revenue),
   };
 }
 
@@ -100,6 +100,19 @@ function deriveUniqueColumnHeaders(
   return Array.from(uniqueHeaders).filter(
     (header) => !redundantHeaders.includes(header)
   );
+}
+
+function roundAndStringify(num: number): string {
+  const rounded = String(Math.round((num + Number.EPSILON) * 100) / 100);
+  const notCorrectlyStringified =
+    /\.[0-9][0-9]$/g[Symbol.match](rounded) === null;
+
+  if (notCorrectlyStringified) {
+    const [whole, decimal] = rounded.split(".");
+    return `${whole}.${decimal ? decimal.padEnd(2, "0") : "00"}`;
+  }
+
+  return rounded;
 }
 
 export {

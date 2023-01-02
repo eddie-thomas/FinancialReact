@@ -40,13 +40,17 @@ function BalanceSheet() {
         <Grid item>
           <Grid container direction="column">
             <Grid item>
-              <fieldset style={{ borderRadius: "5px" }}>
+              <fieldset
+                style={{ borderRadius: "5px", borderColor: "rgba(0,0,0,0.2)" }}
+              >
                 <legend style={{ margin: "5px" }}>Filter by date</legend>
                 <DatePeriodSelector />
               </fieldset>
             </Grid>
             <Grid item>
-              <fieldset style={{ borderRadius: "5px" }}>
+              <fieldset
+                style={{ borderRadius: "5px", borderColor: "rgba(0,0,0,0.2)" }}
+              >
                 <legend style={{ margin: "5px" }}>Filter by account</legend>
                 <Button fullWidth>All accounts</Button>
               </fieldset>
@@ -54,33 +58,34 @@ function BalanceSheet() {
           </Grid>
         </Grid>
         <Grid item display="flex">
-          <Grid container direction="column" fontFamily="Courier">
+          <Grid container direction="column" fontFamily="Courier" sx={{ m: 3 }}>
             <Grid item display="flex" justifyContent="space-between">
               <div>
-                <b style={{ color: "#79ea86", float: "right" }}>+</b>Total
-                Expense:
-              </div>
-              <>
-                <b>{expense}</b>
-              </>
-            </Grid>
-            <Grid item display="flex" justifyContent="space-between">
-              <div>
-                <b style={{ color: "#e75757", float: "right" }}>-</b>Total
-                Revenue:
+                <b style={{ color: "#79ea86", float: "right" }}>+</b>
+                Total Revenue:
               </div>
               <>
                 <b>{revenue}</b>
               </>
             </Grid>
             <Grid item display="flex" justifyContent="space-between">
+              <div>
+                <b style={{ color: "#e75757", float: "right" }}>-</b>
+                Total Expense:
+              </div>
+              <>
+                <b>{expense}</b>
+              </>
+            </Grid>
+
+            <Grid item display="flex" justifyContent="space-between">
               Total Balance:
               <b
                 style={{
                   color:
-                    balance === 0
+                    parseFloat(balance) === 0
                       ? "#649ff0"
-                      : balance > 0
+                      : parseFloat(balance) > 0
                       ? "#79ea86"
                       : "#e75757",
                 }}

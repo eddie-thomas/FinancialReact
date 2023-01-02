@@ -11,17 +11,22 @@ export enum PageType {
 export interface ContextType {
   body?: JSX.Element;
   bodyType?: PageType;
+  loginDialogOpen: boolean;
   loggedIn: boolean;
   user?: { name: string; accounts: Array<string> };
 }
 
 interface AppStateType extends ContextType {
   setBody: (body?: JSX.Element, bodyType?: PageType) => void;
-  handleLogIn: () => void;
+  handleAttemptLogin: () => void;
+  handleLogIn: (userIndex: number) => void;
   handleLogOut: () => void;
 }
 
-export const defaultValue: ContextType = { loggedIn: false };
+export const defaultValue: ContextType = {
+  loggedIn: false,
+  loginDialogOpen: false,
+};
 
 export const Context = createContext<
   [ContextType, React.Dispatch<React.SetStateAction<ContextType>>]
@@ -34,8 +39,15 @@ export function useContext(): AppStateType {
     ...context,
     setBody: (body, bodyType) =>
       setContext((prev) => ({ ...prev, body, bodyType })),
-    handleLogIn: () =>
-      setContext((prev) => ({ ...prev, loggedIn: true, user: users[0] })),
+    handleAttemptLogin: () =>
+      setContext((prev) => ({ ...prev, loginDialogOpen: true })),
+    handleLogIn: (userIndex: number) =>
+      setContext((prev) => ({
+        ...prev,
+        loggedIn: true,
+        loginDialogOpen: false,
+        user: users[userIndex],
+      })),
     handleLogOut: () =>
       setContext((prev) => ({ ...prev, loggedIn: false, user: undefined })),
   };

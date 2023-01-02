@@ -30,13 +30,12 @@ export interface TransactionTableProps {
 }
 
 const StyledFooterContainer = styled(Box)(({ theme }) => ({
-  margin: theme.spacing(5),
-
-  [theme.breakpoints.up("sm")]: {
+  margin: theme.spacing(3),
+  [theme.breakpoints.up("md")]: {
     justifyContent: "right",
     display: "flex",
   },
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     display: "grid",
     justifyContent: "center",
     "& .MuiTypography-root": {
@@ -60,26 +59,30 @@ function TransactionTable({ account }: TransactionTableProps) {
     <StyledPaper>
       <StyledFooterContainer>
         <Typography>
-          Revenue:&nbsp;<b>{`${revenue}`.padStart(10, " ")}</b>
+          Revenue:&nbsp;<b>{revenue.padStart(10, " ")}</b>
         </Typography>
         <Typography>
-          Expense:&nbsp;<b>{`${expense}`.padStart(10, " ")}</b>
+          Expense:&nbsp;<b>{expense.padStart(10, " ")}</b>
         </Typography>
         <Typography>
           Balance:&nbsp;
           <b
             style={{
               color:
-                balance === 0 ? "#649ff0" : balance > 0 ? "#79ea86" : "#e75757",
+                parseFloat(balance) === 0
+                  ? "#649ff0"
+                  : parseFloat(balance) > 0
+                  ? "#79ea86"
+                  : "#e75757",
             }}
           >
-            {`${balance}`.padStart(10, " ")}
+            {balance.padStart(10, " ")}
           </b>
         </Typography>
       </StyledFooterContainer>
       <TableContainer
         sx={{
-          maxHeight: "50vh",
+          maxHeight: "70vh",
           maxWidth: "100vw",
         }}
       >
