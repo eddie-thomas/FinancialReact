@@ -1,6 +1,8 @@
 import json
 import re
 
+from datetime import date
+
 from Exceptions import TooManyColumnsFoundError
 
 from py_pdf_parser.loaders import load_file
@@ -32,11 +34,14 @@ class WellsFargoPdfDocumentBaseClass:
         self.statement_type = statement_type
         self.column_headers = self._get_column_headers_based_on_statement_type()
         self.number_of_rows = self._tag_dated_row_data()
+        self.rollover_year = False
+        self.year = date.today().year
         self.show = show
 
         # Side-effects needing to happen.
         self._set_column_tags()
         self._set_account_number()
+        self._set_year()
 
     # Private methods.
     def _get_column_headers_based_on_statement_type(self):
@@ -119,6 +124,12 @@ class WellsFargoPdfDocumentBaseClass:
                 # Do extra work here if we are a description.
                 if column_header_tag == "description":
                     text = self._get_element_below_without_tag(row_element)
+                    return {column_header_tag: text}
+                # If we have a date, make it a complete date
+                if column_header_tag in ["trans", "post", "date"]:
+                    text = incomplete_date_into_complete_date(
+                        row_element.text(), self.year, self.rollover_year
+                    )
                     return {column_header_tag: text}
                 return {column_header_tag: row_element.text()}
 
@@ -220,8 +231,8 @@ class WellsFargoPdfDocumentBaseClass:
             # If anything we think could be additional text, has a tag then it's not what we want.
             if len(element_below.tags):
                 break
-            # Append text
-            text += element_below.text()
+            # Append text with break
+            text += element_below.text() + "\n"
             # Remove excess spacing.
         return re.sub(" +", " ", text)
 
@@ -236,15 +247,6 @@ class WellsFargoPdfDocumentBaseClass:
             PDFDocument: A PDFDocument with the specified file loaded.
         """
         return load_file(file, {"line_overlap": 0.01, "line_margin": 0.01})
-
-    def _set_column_tags(self):
-        """Method to set our column tags.
-
-        Private
-        """
-        for tag, elements in self.column_headers.items():
-            elements.add_tag_to_elements(tag)
-            elements.add_tag_to_elements("identifiedAsColumnHeader")
 
     def _set_account_number(self):
         """Method to set the classes account number
@@ -290,6 +292,42 @@ class WellsFargoPdfDocumentBaseClass:
             except Exception as e:
                 print("\nCannot find account number.")
                 raise e
+
+    def _set_column_tags(self):
+        """Method to set our column tags.
+
+        Private
+        """
+        for tag, elements in self.column_headers.items():
+            elements.add_tag_to_elements(tag)
+            elements.add_tag_to_elements("identifiedAsColumnHeader")
+
+    def _set_year(self):
+        """Get the year when the transaction begins
+
+        Notes:
+            This returns the year when the first transaction date was made. We actually
+            have a full date, but only need the starting date.
+
+        Returns:
+            None, but sets the `self.year` for the statement.
+        """
+        if self.statement_type == "checking":
+            statement_date = self.parsed_document.elements[1].text()
+            self.rollover_year = bool(
+                re.match(r"^december", statement_date, re.IGNORECASE)
+            )
+            self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[-4:]
+
+        if self.statement_type == "credit":
+            month_to_month_elements = self.parsed_document.elements.filter_by_regex(
+                r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9].*[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]$"
+            )
+            statement_date = month_to_month_elements[0].text()
+            self.rollover_year = bool(re.match(r"^12", statement_date))
+            self.year = re.match(
+                r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]", statement_date
+            ).group(0)[-4:]
 
     def _tag_dated_row_data(self):
         """Method to tag our dated data, and the elements inline
@@ -371,3 +409,27 @@ class WellsFargoPdfDocumentBaseClass:
             ElementList
         """
         return self.parsed_document.elements
+
+
+def incomplete_date_into_complete_date(
+    incomplete_date: str, year: str | int, rollover_year: bool
+):
+    """Turn the incomplete dates from transactions into full dates that can be
+    parsed, either by the `datetime` library, or JavaScript's `Date` object.
+
+    Args:
+        incomplete_date (str): The incomplete date
+        year (str|int): The beginning year of the transaction
+        rollover_year (bool): Boolean stating whether this is a roll over year or now. If so,
+            use the next year for all of January's dates
+
+    Returns:
+        String representing the complete date
+    """
+    # Convert everything into an int, for the sake of completeness
+    [month, day] = incomplete_date.split("/")
+    int_month = int(month)
+    int_day = int(day)
+    int_year = int(year) + 1 if (rollover_year and int_month == 1) else int(year)
+
+    return f"{int_month:02d}/{int_day:02d}/{int_year}"
