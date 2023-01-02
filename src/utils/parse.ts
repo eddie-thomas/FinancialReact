@@ -50,13 +50,21 @@ function aggregateAmounts(arrayOfTransactions: Transactions): {
   };
 }
 
-function concatenateAccountTransactions({ account }: { account: string }): {
+function concatenateAccountTransactions({
+  account,
+}: {
+  account: string | string[];
+}): {
   data: Transactions;
   titles: string[];
 } {
   let accountType;
   const accountTransactions: Transactions = data
-    .filter((transaction) => transaction.account === account)
+    .filter((transaction) =>
+      account instanceof Array
+        ? account.includes(transaction.account)
+        : transaction.account === account
+    )
     .map((transaction) => {
       accountType = transaction.type;
       return JSON.parse(transaction.data);
@@ -77,7 +85,7 @@ function concatenateAccountTransactions({ account }: { account: string }): {
   }
 
   if (accountTransactions.length)
-    throw Error(`Invalid account type attached to account: ${account}`);
+    throw Error(`Invalid account type attached to account(s): ${account}`);
 
   return { data: accountTransactions, titles };
 }

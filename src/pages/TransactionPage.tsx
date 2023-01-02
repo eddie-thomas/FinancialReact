@@ -11,15 +11,8 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Paper,
   styled,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Tabs,
   Typography,
 } from "@mui/material";
@@ -27,14 +20,9 @@ import {
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 
 import { useContext } from "../utils/Context";
-import {
-  aggregateAmounts,
-  concatenateAccountTransactions,
-} from "../utils/parse";
 
-interface TransactionTableProps {
-  account: string;
-}
+import BalanceSheet from "../components/BalanceSheet";
+import TransactionTable from "../components/TransactionTable";
 
 const StyledContainer = styled(Box)(() => ({
   flexGrow: 1,
@@ -49,8 +37,6 @@ const StyledContainer = styled(Box)(() => ({
     marginRight: "10%",
   },
 }));
-
-const PureTransactionTable = memo(TransactionTable);
 
 function TransactionPage() {
   const [account, setAccount] = useState<string>("");
@@ -135,110 +121,11 @@ function TransactionPage() {
         </Tabs>
       </Box>
 
-      {value === 0 && <PureTransactionTable account={account} />}
-      {value === 1 && <>Balance info.</>}
+      {value === 0 && <TransactionTable account={account} />}
+      {value === 1 && <BalanceSheet />}
       {value === 2 && <>Stats.</>}
       {renderMenu}
     </StyledContainer>
-  );
-}
-
-function TransactionTable({ account }: TransactionTableProps) {
-  const { data, titles } = concatenateAccountTransactions({ account });
-  const { balance, expense, revenue } = aggregateAmounts(data);
-
-  return (
-    <Paper
-      sx={{
-        overflow: "hidden",
-        mx: { xs: "unset", sm: 5 },
-        backgroundColor: "rgba(255,255,255,0)",
-      }}
-    >
-      <TableContainer
-        sx={{
-          maxHeight: "50vh",
-          maxWidth: "100vw",
-        }}
-      >
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              {titles.map((title) => (
-                <TableCell
-                  sx={{
-                    textTransform: "capitalize",
-                  }}
-                  key={title}
-                  align="right"
-                >
-                  {title}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((row) => {
-              return (
-                <TableRow hover tabIndex={-1} key={JSON.stringify(row)}>
-                  {titles.map((title) => {
-                    const value = row[title];
-                    // parseFloat(value.replace(/,/g, ''));
-                    return (
-                      <TableCell
-                        key={`${Math.random()}-${value}`}
-                        align="right"
-                      >
-                        {value}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Box
-        sx={(theme) => ({
-          margin: theme.spacing(5),
-          [theme.breakpoints.up("xs")]: {
-            justifyContent: "right",
-            display: "flex",
-          },
-          [theme.breakpoints.down("sm")]: {
-            display: "grid",
-            justifyContent: "center",
-            "& .MuiTypography-root": {
-              textAlign: "right",
-            },
-          },
-          "& .MuiTypography-root": {
-            borderRight: "1px solid #000",
-            pr: 1,
-            mr: 1,
-          },
-        })}
-      >
-        <Typography>
-          Revenue:&nbsp;<b>{revenue}</b>
-        </Typography>
-        <Typography>
-          Expense:&nbsp;<b>{expense}</b>
-        </Typography>
-        <Typography>
-          Balance:&nbsp;
-          <b
-            style={{
-              color:
-                balance === 0 ? "#649ff0" : balance > 0 ? "#79ea86" : "#e75757",
-            }}
-          >
-            {balance}
-          </b>
-        </Typography>
-      </Box>
-    </Paper>
   );
 }
 
