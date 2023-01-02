@@ -27,3 +27,4 @@ yarn-error.log*
 
 # development
 data.json
+users.json
