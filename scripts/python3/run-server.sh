@@ -42,10 +42,7 @@ else
 fi
 
 # ================================
-# This is where we can run blocks of code via our virtual environment using node
-# The first argument is meant to be the path to the PDF
-# The second argument is meant to be the type of PDF, "checking"|"credit"|"savings"
-$python_cmd ./scripts/Parse.py $1 $2 $3
+$python_cmd -m flask --app ./backend/server run
 # ================================
 
 echo

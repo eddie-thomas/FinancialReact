@@ -1,4 +1,4 @@
-import data from "../json/data.json";
+import { data } from "./jsonMiddleware";
 
 export type Transactions = Array<{ [key: string]: string }>;
 

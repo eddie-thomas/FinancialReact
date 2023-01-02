@@ -2,6 +2,7 @@
   "name": "financial-react",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost:5000",
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
@@ -15,6 +16,7 @@
     "@types/node": "^16.18.3",
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.8",
+    "concurrently": "^7.6.0",
     "dayjs": "^1.11.7",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
@@ -24,6 +26,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "dev-v1": "concurrently --kill-others \"npm run python:server\" \"npm run start\"",
     "lint": "eslint src/**/*.{ts,tsx}",
     "lint:fix": "eslint --fix src/**/*.{ts,tsx}",
     "precommit": "npm run lint:fix && npm run pretty",
@@ -32,6 +35,7 @@
     "prettier": "prettier --write 'src/**/*'",
     "python:init": "./scripts/python3/initialize.sh",
     "python:parse": "./scripts/python3/run-parser.sh",
+    "python:server": "./scripts/python3/run-server.sh",
     "python:test": "./scripts/python3/test-parser.sh",
     "start": "react-scripts start",
     "build": "react-scripts build",
