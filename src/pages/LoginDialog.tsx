@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import {
   Avatar,
   Dialog,
@@ -12,10 +12,9 @@ import {
 import PersonIcon from "@mui/icons-material/Person";
 import AddIcon from "@mui/icons-material/Add";
 
-import { useContext } from "../utils/Context";
+import { useContext, type User } from "../utils/Context";
 import { blue } from "@mui/material/colors";
-
-import users from "../json/users.json";
+import { postData } from "../utils/post";
 
 export default memo(LoginDialog);
 
@@ -26,23 +25,44 @@ function LoginDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const [users, setUsers] = useState<Array<User>>();
   const app = useContext();
 
   const handleClose = () => {
     onClose();
   };
 
-  const handleListItemClick = (userIndex: number) => {
-    app.handleLogIn(userIndex);
+  const handleListItemClick = (user: {
+    name: string;
+    accounts: Array<string>;
+  }) => {
+    app.handleLogIn(user);
   };
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const users_response = await postData<undefined, Array<User>>(
+          "/users",
+          { method: "GET" }
+        );
+        setUsers(users_response);
+      } catch (error) {
+        console.warn("Couldn't load user data");
+        throw error;
+      }
+    };
+
+    if (users === undefined) fetchUsers();
+  }, []);
 
   return (
     <Dialog onClose={handleClose} open={open}>
       <DialogTitle>Login to account</DialogTitle>
       <List sx={{ pt: 0 }}>
-        {users.map((user, userIndex) => (
+        {users?.map((user: User) => (
           <ListItem disableGutters key={JSON.stringify(user)}>
-            <ListItemButton onClick={() => handleListItemClick(userIndex)}>
+            <ListItemButton onClick={() => handleListItemClick(user)}>
               <ListItemAvatar>
                 <Avatar sx={{ bgcolor: blue[100], color: blue[600] }}>
                   <PersonIcon />

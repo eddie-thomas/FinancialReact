@@ -166,6 +166,13 @@ function Bar() {
             <Divider flexItem orientation="vertical" />
 
             <IconButton
+              sx={{
+                borderRadius: 1,
+                ...(app.bodyType &&
+                  app.bodyType === "upload" && {
+                    borderBottom: "3px solid #fff",
+                  }),
+              }}
               size="large"
               onClick={() => app.setBody(<UploadPage />, PageType.Upload)}
             >

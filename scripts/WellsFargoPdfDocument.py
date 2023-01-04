@@ -195,17 +195,30 @@ class WellsFargoPdfDocumentBaseClass:
             [column headers-row value associated with column-header].
         """
         json_row_data = {}
-        for element in row_elements:
-            element_dict = self._get_dict_from_row_element(element)
-            json_row_data.update(element_dict)
+        try:
+            for element in row_elements:
+                element_dict = self._get_dict_from_row_element(element)
+                json_row_data.update(element_dict)
 
-        return json_row_data
+            return json_row_data
+        except BaseException as e:
+            print(
+                f"Could not parse the row data into JSON. Origin error: {e}",
+                file=sys.stderr,
+            )
+            # Visualize the row elements that cannot be parsed
+            visualise(
+                self.parsed_document, elements=row_elements
+            ) if self.show else None
+            return {}
 
     def _get_element_below_without_tag(self, element: PDFElement):
         """Method to get all of the elements below a specific one that hasn't been tagged yet.
         After iterating through them, we append their text to ours initial element and return.
 
-        Note:
+        Private
+
+        NOTE:
             We could take the last found description of the page and make sure we only add
             "potential" descriptions if there above the quote, "last" one, but it doesn't matter
             because we'd loose out on any strings below the last one. In the current
@@ -234,7 +247,7 @@ class WellsFargoPdfDocumentBaseClass:
             if len(element_below.tags):
                 break
             # Append text with break
-            text += element_below.text() + "\n"
+            text += element_below.text() + " "
             # Remove excess spacing.
         return re.sub(" +", " ", text)
 
@@ -250,10 +263,16 @@ class WellsFargoPdfDocumentBaseClass:
         """
         return load_file(file, {"line_overlap": 0.01, "line_margin": 0.01})
 
-    def _set_account_number(self):
+    def _set_account_number(self, attempted_element_index=0):
         """Method to set the classes account number
 
-        Note:
+        Private
+
+        Args:
+            attempted_element_index (int): The index of the attempting element we will
+            try to derive the account number from.
+
+        NOTE:
             So far, in all cases, we have either `Account number` or `Account number:`
             and the actual number is either part of the element or to the right of it.
             I believe we can expect this until multiple issues arise.
@@ -268,11 +287,11 @@ class WellsFargoPdfDocumentBaseClass:
         # RegExp for getting PDFElement.
         account_num_elem = self.parsed_document.elements.filter_by_regex(
             r"^account number[:]?", re.IGNORECASE
-        )[0]
+        )
 
         try:
             # Try to parse account number into an int
-            account_num_elem_text = account_num_elem.text()
+            account_num_elem_text = account_num_elem[attempted_element_index].text()
 
             account_num = re.match(
                 r"(?:^account number[:]?)([\s\d]+)",
@@ -284,15 +303,20 @@ class WellsFargoPdfDocumentBaseClass:
             # If not, try getting the element beside it and check if that is the number.
             try:
                 account_num = self.parsed_document.elements.to_the_right_of(
-                    account_num_elem
+                    account_num_elem[0]
                 )[0]
 
                 self.account_num = (
                     account_num.text()[-4:] if int(account_num.text()[-4:]) else None
                 )
             # Otherwise raise exceptions.
+            except ValueError:
+                self._set_account_number(attempted_element_index + 1)
             except Exception as e:
                 print("\nCannot find account number.", file=sys.stderr)
+                visualise(
+                    self.parsed_document, elements=account_num_elem
+                ) if self.show else None
                 raise e
 
     def _set_column_tags(self):
@@ -307,7 +331,9 @@ class WellsFargoPdfDocumentBaseClass:
     def _set_year(self):
         """Get the year when the transaction begins
 
-        Notes:
+        Private
+
+        NOTE:
             This returns the year when the first transaction date was made. We actually
             have a full date, but only need the starting date.
 
@@ -316,11 +342,22 @@ class WellsFargoPdfDocumentBaseClass:
         """
         try:
             if self.statement_type == "checking":
-                statement_date = self.parsed_document.elements[1].text()
-                self.rollover_year = bool(
-                    re.match(r"^december", statement_date, re.IGNORECASE)
-                )
-                self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[-4:]
+                try:
+                    statement_date = self.parsed_document.elements[1].text()
+                    self.rollover_year = bool(
+                        re.match(r"^december", statement_date, re.IGNORECASE)
+                    )
+                    self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[
+                        -4:
+                    ]
+                except Exception:
+                    statement_date = self.parsed_document.elements[2].text()
+                    self.rollover_year = bool(
+                        re.match(r"^december", statement_date, re.IGNORECASE)
+                    )
+                    self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[
+                        -4:
+                    ]
 
             if self.statement_type == "credit":
                 month_to_month_elements = self.parsed_document.elements.filter_by_regex(
@@ -347,7 +384,7 @@ class WellsFargoPdfDocumentBaseClass:
             array, then adding one at the end of the for-loop to get the exact number
             of rows.
 
-            Note: This means that Row #1 will have a tag `row_0`.
+            NOTE: This means that Row #1 will have a tag `row_0`.
         """
         dated_row_data = self._get_date_elements()
         row_number = 0

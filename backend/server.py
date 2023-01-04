@@ -1,7 +1,10 @@
+import json
 import re
 import sys
 
 sys.path.append("./scripts")
+
+import DIRECTORIES
 
 from flask import Flask
 from flask import request
@@ -15,6 +18,39 @@ from Parse import Parse
 from typing import Literal
 
 app = Flask(__name__)
+
+
+@app.route("/data", methods=["GET"])
+def data():
+    """Fetch data from the `data.json` file in the DATABASE directory
+
+    NOTE:
+        This function reads the `data.json` file and loads it using the `json` lib
+        then returns the array of dictionaries as a result.
+    """
+    try:
+        data = open(f"{DIRECTORIES.DATABASE}", "r")
+        return json.loads("".join(data.readlines()))
+    except Exception:
+        return []
+
+
+@app.route("/users", methods=["GET"])
+def users():
+    """Fetch users from the `users.json` file in the DATABASE directory
+
+    NOTE:
+        This function reads the `users.json` file and loads it using the `json` lib
+        then returns the array of dictionaries as a result.
+
+    TODO:
+        Create a post function for adding a user
+    """
+    try:
+        data = open(f"{DIRECTORIES.USERS}", "r")
+        return json.loads("".join(data.readlines()))
+    except Exception:
+        return []
 
 
 @app.route("/upload", methods=["POST"])
@@ -52,7 +88,8 @@ def upload():
                     if re.search(r"checking", file, re.IGNORECASE)
                     else "credit"
                     if re.search(r"credit", file, re.IGNORECASE)
-                    else "savings"
+                    # Savings statements can be parsed the exact same as checking statements
+                    else "checking"
                     if re.search(r"savings", file, re.IGNORECASE)
                     else data["statement_type"]
                     if "statement_type" in data
@@ -62,6 +99,7 @@ def upload():
                         )
                     )
                 )
+
                 PARSER = Parse(
                     f"./pdfs-sensative/{file}",
                     data["debug"],
@@ -71,7 +109,6 @@ def upload():
                 if PARSER.is_file(file):
                     try:
                         PARSER.parse()
-                        return {"success": True}
                     except BaseException as e:
                         return {"success": False, "errors": [str(e)]}
                 else:
@@ -80,6 +117,9 @@ def upload():
                             f"{file} was not determined to be a legitimate file. It likely isn't within the `./pdfs-sensative` directory, or some malicious injection attempt has occurred."
                         )
                     )
+
+            return {"success": True}
+
     except IncorrectServerRequest:
         print("\nMalformed request.\n", file=sys.stderr)
 

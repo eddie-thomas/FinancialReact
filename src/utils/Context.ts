@@ -1,11 +1,14 @@
 import { createContext, useContext as useReactContext } from "react";
 
-import users from "../json/users.json";
-
 export enum PageType {
   Account = "account",
   Transaction = "transaction",
   Upload = "upload",
+}
+
+export interface User {
+  name: string;
+  accounts: Array<string>;
 }
 
 export interface ContextType {
@@ -13,13 +16,13 @@ export interface ContextType {
   bodyType?: PageType;
   loginDialogOpen: boolean;
   loggedIn: boolean;
-  user?: { name: string; accounts: Array<string> };
+  user?: User;
 }
 
 interface AppStateType extends ContextType {
   setBody: (body?: JSX.Element, bodyType?: PageType) => void;
   handleAttemptLogin: () => void;
-  handleLogIn: (userIndex: number) => void;
+  handleLogIn: (user: User) => void;
   handleLogOut: () => void;
 }
 
@@ -41,12 +44,12 @@ export function useContext(): AppStateType {
       setContext((prev) => ({ ...prev, body, bodyType })),
     handleAttemptLogin: () =>
       setContext((prev) => ({ ...prev, loginDialogOpen: true })),
-    handleLogIn: (userIndex: number) =>
+    handleLogIn: (user: User) =>
       setContext((prev) => ({
         ...prev,
         loggedIn: true,
         loginDialogOpen: false,
-        user: users[userIndex],
+        user,
       })),
     handleLogOut: () =>
       setContext((prev) => ({ ...prev, loggedIn: false, user: undefined })),

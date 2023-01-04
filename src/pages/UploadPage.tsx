@@ -65,8 +65,13 @@ function UploadPage() {
         debug: debug ? Debug.Yes : Debug.No,
       };
 
-      const response: { success: boolean; errors?: Array<string> } =
-        await postData("/upload", body);
+      const response = await postData<
+        UploadRequestBody,
+        { success: boolean; errors?: Array<string> }
+      >("/upload", {
+        data: body,
+        method: "POST",
+      });
       handleSuccess(response.success, response.errors);
     } catch (error) {
       handleSuccess(false);

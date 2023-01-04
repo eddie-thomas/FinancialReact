@@ -1,3 +1,4 @@
+import DIRECTORIES
 import json
 import os.path
 import sys
@@ -30,7 +31,7 @@ class Parse:
             ACCT_NUM (str): Account number
             JSON_TEXT (str): Stringified JSON
         """
-        with open("./src/json/data.json", "r+") as file:
+        with open(f"{DIRECTORIES.DATABASE}", "r+") as file:
             # Read previous data, and possibly initialize previous if not already defined
             PREVIOUS_CONTENTS: list = json.loads("".join(file.readlines()) or "[]")
             # Check if we already have the data loaded

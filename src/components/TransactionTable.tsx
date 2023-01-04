@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import {
   Box,
   Paper,
@@ -14,7 +14,9 @@ import {
 import {
   aggregateAmounts,
   concatenateAccountTransactions,
+  type Transactions,
 } from "../utils/parse";
+import { postData } from "../utils/post";
 
 export default memo(TransactionTable);
 
@@ -52,8 +54,29 @@ const StyledFooterContainer = styled(Box)(({ theme }) => ({
 }));
 
 function TransactionTable({ account }: TransactionTableProps) {
-  const { data, titles } = concatenateAccountTransactions({ account });
-  const { balance, expense, revenue } = aggregateAmounts(data);
+  const [data, setData] = useState<Transactions | undefined>();
+
+  const { data: concatTransactions, titles } = concatenateAccountTransactions({
+    account,
+    data: data || [],
+  });
+  const { balance, expense, revenue } = aggregateAmounts(concatTransactions);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data_response = await postData<undefined, Transactions>("/data", {
+          method: "GET",
+        });
+        setData(data_response);
+      } catch (error) {
+        console.warn("Couldn't load user data");
+        throw error;
+      }
+    };
+
+    if (data === undefined) fetchUsers();
+  }, []);
 
   return (
     <StyledPaper>
@@ -103,7 +126,7 @@ function TransactionTable({ account }: TransactionTableProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.map((row) => {
+            {concatTransactions.map((row) => {
               return (
                 <TableRow hover tabIndex={-1} key={JSON.stringify(row)}>
                   {titles.map((title) => {

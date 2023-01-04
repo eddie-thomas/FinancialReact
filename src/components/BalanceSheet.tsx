@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Button, Grid, Stack, TextField } from "@mui/material";
 import { LocalizationProvider, MobileDatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -11,7 +11,9 @@ import { StyledPaper } from "./TransactionTable";
 import {
   aggregateAmounts,
   concatenateAccountTransactions,
+  Transactions,
 } from "../utils/parse";
+import { postData } from "../utils/post";
 
 enum DateChoice {
   From = "from",
@@ -21,11 +23,30 @@ enum DateChoice {
 export default memo(BalanceSheet);
 
 function BalanceSheet() {
+  const [data, setData] = useState<Transactions | undefined>();
+
   const app = useContext();
-  const { data } = concatenateAccountTransactions({
+  const { data: concatTransactions } = concatenateAccountTransactions({
     account: app.user?.accounts || [],
+    data: data || [],
   });
-  const { balance, expense, revenue } = aggregateAmounts(data);
+  const { balance, expense, revenue } = aggregateAmounts(concatTransactions);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data_response = await postData<undefined, Transactions>("/data", {
+          method: "GET",
+        });
+        setData(data_response);
+      } catch (error) {
+        console.warn("Couldn't load user data");
+        throw error;
+      }
+    };
+
+    if (data === undefined) fetchUsers();
+  }, []);
 
   return (
     <StyledPaper>
