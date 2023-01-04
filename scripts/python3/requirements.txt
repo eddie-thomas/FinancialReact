@@ -1,4 +1,6 @@
-py_pdf_parser
+flask
 matplotlib
+py_pdf_parser
+python-dotenv
 pyvoronoi
 shapely

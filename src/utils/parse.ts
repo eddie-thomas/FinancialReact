@@ -1,5 +1,3 @@
-import data from "../json/data.json";
-
 export type Transactions = Array<{ [key: string]: string }>;
 
 function aggregateAmounts(arrayOfTransactions: Transactions): {
@@ -52,8 +50,10 @@ function aggregateAmounts(arrayOfTransactions: Transactions): {
 
 function concatenateAccountTransactions({
   account,
+  data,
 }: {
   account: string | string[];
+  data: Transactions;
 }): {
   data: Transactions;
   titles: string[];
@@ -75,19 +75,34 @@ function concatenateAccountTransactions({
   if (accountType === "checking") {
     return {
       data: accountTransactions.sort(({ date: dateA }, { date: dateB }) => {
-        const dates = [new Date(dateA), new Date(dateB)];
-        return dates[0].getMilliseconds() - dates[1].getMilliseconds();
+        const a = new Date(dateA);
+        const b = new Date(dateB);
+        const diff = a < b ? 1 : -1;
+
+        return diff;
       }),
       titles,
     };
   } else if (accountType === "credit") {
-    return { data: accountTransactions, titles };
+    return {
+      data: accountTransactions.sort(({ trans: dateA }, { trans: dateB }) => {
+        const a = new Date(dateA);
+        const b = new Date(dateB);
+        const diff = a < b ? 1 : -1;
+
+        return diff;
+      }),
+      titles,
+    };
   }
 
   if (accountTransactions.length)
     throw Error(`Invalid account type attached to account(s): ${account}`);
 
-  return { data: accountTransactions, titles };
+  return {
+    data: accountTransactions,
+    titles,
+  };
 }
 
 function deriveUniqueColumnHeaders(

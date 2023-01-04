@@ -24,7 +24,7 @@ then
 fi
 
 # Use python3 command if available, otherwise try python
-# Note: Be sure to activate the Python virtual environment before trying to
+# NOTE: Be sure to activate the Python virtual environment before trying to
 # resolve the python version
 set +e
 python_cmd=$(which python3 2> /dev/null)

@@ -1,4 +1,4 @@
-import { type ChangeEvent, memo, useState } from "react";
+import { memo, useState } from "react";
 import {
   AppBar,
   Button,
@@ -30,6 +30,7 @@ import {
 import TransactionPage from "./pages/TransactionPage";
 import AccountPage from "./pages/AccountPage";
 import LoginDialog from "./pages/LoginDialog";
+import UploadPage from "./pages/UploadPage";
 
 const customTheme = createTheme({
   components: {
@@ -113,16 +114,6 @@ function Bar() {
     handleMenuClose();
   };
 
-  const handleUploads = (event: ChangeEvent<HTMLInputElement>) => {
-    const ele = event.target;
-    const files = ele.files;
-
-    Array.from(files || []).map((file) => {
-      // Do something more here
-      console.log(file.name);
-    });
-  };
-
   const renderMenu = (
     <Menu
       anchorEl={anchorEl}
@@ -174,14 +165,17 @@ function Bar() {
 
             <Divider flexItem orientation="vertical" />
 
-            <IconButton size="large" component="label">
-              <input
-                hidden
-                accept=".pdf"
-                type="file"
-                multiple
-                onChange={handleUploads}
-              />
+            <IconButton
+              sx={{
+                borderRadius: 1,
+                ...(app.bodyType &&
+                  app.bodyType === "upload" && {
+                    borderBottom: "3px solid #fff",
+                  }),
+              }}
+              size="large"
+              onClick={() => app.setBody(<UploadPage />, PageType.Upload)}
+            >
               <Tooltip
                 title={
                   <Typography fontFamily="Arsher">

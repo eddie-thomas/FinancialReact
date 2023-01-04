@@ -1,5 +1,6 @@
 import json
 import re
+import sys
 
 from datetime import date
 
@@ -27,7 +28,7 @@ class WellsFargoPdfDocumentBaseClass:
         Args:
             file (str): The file path, either absolute or relative.
             show (bool): Should we visualize the PDF after getting the data.
-            statement_type ("checking"|"credit"|"savings"): The file path, either absolute or relative.
+            statement_type (Literal["checking", "credit", "savings"]): The file path, either absolute or relative.
         """
         self.account_num: None | int = None
         self.parsed_document = self._load_doc(file)
@@ -174,7 +175,8 @@ class WellsFargoPdfDocumentBaseClass:
         except NoElementFoundError:
             # Visualize when there aren't any headers found, if this error becomes more common
             print(
-                f"\nCould not determine a column header!\nNo data returned for a known row: {row_element.text()}"
+                f"\nCould not determine a column header!\nNo data returned for a known row: {row_element.text()}",
+                file=sys.stderr,
             )
             return {}
         except TooManyColumnsFoundError:
@@ -193,17 +195,30 @@ class WellsFargoPdfDocumentBaseClass:
             [column headers-row value associated with column-header].
         """
         json_row_data = {}
-        for element in row_elements:
-            element_dict = self._get_dict_from_row_element(element)
-            json_row_data.update(element_dict)
+        try:
+            for element in row_elements:
+                element_dict = self._get_dict_from_row_element(element)
+                json_row_data.update(element_dict)
 
-        return json_row_data
+            return json_row_data
+        except BaseException as e:
+            print(
+                f"Could not parse the row data into JSON. Origin error: {e}",
+                file=sys.stderr,
+            )
+            # Visualize the row elements that cannot be parsed
+            visualise(
+                self.parsed_document, elements=row_elements
+            ) if self.show else None
+            return {}
 
     def _get_element_below_without_tag(self, element: PDFElement):
         """Method to get all of the elements below a specific one that hasn't been tagged yet.
         After iterating through them, we append their text to ours initial element and return.
 
-        Note:
+        Private
+
+        NOTE:
             We could take the last found description of the page and make sure we only add
             "potential" descriptions if there above the quote, "last" one, but it doesn't matter
             because we'd loose out on any strings below the last one. In the current
@@ -232,7 +247,7 @@ class WellsFargoPdfDocumentBaseClass:
             if len(element_below.tags):
                 break
             # Append text with break
-            text += element_below.text() + "\n"
+            text += element_below.text() + " "
             # Remove excess spacing.
         return re.sub(" +", " ", text)
 
@@ -248,10 +263,16 @@ class WellsFargoPdfDocumentBaseClass:
         """
         return load_file(file, {"line_overlap": 0.01, "line_margin": 0.01})
 
-    def _set_account_number(self):
+    def _set_account_number(self, attempted_element_index=0):
         """Method to set the classes account number
 
-        Note:
+        Private
+
+        Args:
+            attempted_element_index (int): The index of the attempting element we will
+            try to derive the account number from.
+
+        NOTE:
             So far, in all cases, we have either `Account number` or `Account number:`
             and the actual number is either part of the element or to the right of it.
             I believe we can expect this until multiple issues arise.
@@ -266,11 +287,11 @@ class WellsFargoPdfDocumentBaseClass:
         # RegExp for getting PDFElement.
         account_num_elem = self.parsed_document.elements.filter_by_regex(
             r"^account number[:]?", re.IGNORECASE
-        )[0]
+        )
 
         try:
             # Try to parse account number into an int
-            account_num_elem_text = account_num_elem.text()
+            account_num_elem_text = account_num_elem[attempted_element_index].text()
 
             account_num = re.match(
                 r"(?:^account number[:]?)([\s\d]+)",
@@ -282,15 +303,20 @@ class WellsFargoPdfDocumentBaseClass:
             # If not, try getting the element beside it and check if that is the number.
             try:
                 account_num = self.parsed_document.elements.to_the_right_of(
-                    account_num_elem
+                    account_num_elem[0]
                 )[0]
 
                 self.account_num = (
                     account_num.text()[-4:] if int(account_num.text()[-4:]) else None
                 )
             # Otherwise raise exceptions.
+            except ValueError:
+                self._set_account_number(attempted_element_index + 1)
             except Exception as e:
-                print("\nCannot find account number.")
+                print("\nCannot find account number.", file=sys.stderr)
+                visualise(
+                    self.parsed_document, elements=account_num_elem
+                ) if self.show else None
                 raise e
 
     def _set_column_tags(self):
@@ -305,29 +331,47 @@ class WellsFargoPdfDocumentBaseClass:
     def _set_year(self):
         """Get the year when the transaction begins
 
-        Notes:
+        Private
+
+        NOTE:
             This returns the year when the first transaction date was made. We actually
             have a full date, but only need the starting date.
 
         Returns:
             None, but sets the `self.year` for the statement.
         """
-        if self.statement_type == "checking":
-            statement_date = self.parsed_document.elements[1].text()
-            self.rollover_year = bool(
-                re.match(r"^december", statement_date, re.IGNORECASE)
-            )
-            self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[-4:]
+        try:
+            if self.statement_type == "checking":
+                try:
+                    statement_date = self.parsed_document.elements[1].text()
+                    self.rollover_year = bool(
+                        re.match(r"^december", statement_date, re.IGNORECASE)
+                    )
+                    self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[
+                        -4:
+                    ]
+                except Exception:
+                    statement_date = self.parsed_document.elements[2].text()
+                    self.rollover_year = bool(
+                        re.match(r"^december", statement_date, re.IGNORECASE)
+                    )
+                    self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[
+                        -4:
+                    ]
 
-        if self.statement_type == "credit":
-            month_to_month_elements = self.parsed_document.elements.filter_by_regex(
-                r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9].*[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]$"
+            if self.statement_type == "credit":
+                month_to_month_elements = self.parsed_document.elements.filter_by_regex(
+                    r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9].*[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]$"
+                )
+                statement_date = month_to_month_elements[0].text()
+                self.rollover_year = bool(re.match(r"^12", statement_date))
+                self.year = re.match(
+                    r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]", statement_date
+                ).group(0)[-4:]
+        except BaseException as e:
+            raise Exception(
+                f"Cannot set the statements initiating year, likely caused by an incorrect statement type. Origin {str(e)}"
             )
-            statement_date = month_to_month_elements[0].text()
-            self.rollover_year = bool(re.match(r"^12", statement_date))
-            self.year = re.match(
-                r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]", statement_date
-            ).group(0)[-4:]
 
     def _tag_dated_row_data(self):
         """Method to tag our dated data, and the elements inline
@@ -340,7 +384,7 @@ class WellsFargoPdfDocumentBaseClass:
             array, then adding one at the end of the for-loop to get the exact number
             of rows.
 
-            Note: This means that Row #1 will have a tag `row_0`.
+            NOTE: This means that Row #1 will have a tag `row_0`.
         """
         dated_row_data = self._get_date_elements()
         row_number = 0
@@ -394,11 +438,14 @@ class WellsFargoPdfDocumentBaseClass:
                     raise Warning(
                         f"\n\nCommon issues could be: \n\t- wrongly assigning the `statement_type`, confirm the actual document is the correct statement type.\n\n\nEvery row should parse to have at least three key, value pairs. This object:\n\n\t{row_dict}\n\ndoesn't conform to our expectations."
                     )
-                json_data.append(row_dict)
+                else:
+                    json_data.append(row_dict)
             except Warning:
                 visualise(
                     self.parsed_document, elements=row_elements
                 ) if self.show else None
+            except BaseException as e:
+                raise e
 
         return json.dumps(json_data)
 
@@ -426,10 +473,15 @@ def incomplete_date_into_complete_date(
     Returns:
         String representing the complete date
     """
-    # Convert everything into an int, for the sake of completeness
-    [month, day] = incomplete_date.split("/")
-    int_month = int(month)
-    int_day = int(day)
-    int_year = int(year) + 1 if (rollover_year and int_month == 1) else int(year)
+    try:
+        # Convert everything into an int, for the sake of completeness
+        [month, day] = incomplete_date.split("/")
+        int_month = int(month)
+        int_day = int(day)
+        int_year = int(year) + 1 if (rollover_year and int_month == 1) else int(year)
 
-    return f"{int_month:02d}/{int_day:02d}/{int_year}"
+        return f"{int_month:02d}/{int_day:02d}/{int_year}"
+    except BaseException as e:
+        raise Exception(
+            f"Cannot convert incomplete date to a complete date. Origin: {str(e)}"
+        )

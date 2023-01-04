@@ -42,8 +42,7 @@ else
 fi
 
 # ================================
-# Arguments are injected in the `Test.py` file.
-$python_cmd ./scripts/Test.py
+$python_cmd -m flask --app ./backend/server run
 # ================================
 
 echo

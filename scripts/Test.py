@@ -128,7 +128,7 @@ class TestClass:
     def test(self):
         """Test the test document to see if parsing it matches the expected data
 
-        Notes:
+        NOTE:
             This test function is using mocked data. We would like to have solid, reusable PDF's that don't
             contain sensitive data to test against, but that may be hard to come by for a while.
 

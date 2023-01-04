@@ -1,3 +1,16 @@
+class IncorrectServerRequest(Exception):
+    """
+    The expected data attached to the upload POST request, was malformed.
+
+    Raised:
+        When `file_names` and/or `user_name` are not keys in the request sent from server.
+    """
+
+    def __init__(self):
+        """Initialize and call the base class constructor with the parameters it needs"""
+        super().__init__("\n\n")
+
+
 class TooManyColumnsFoundError(Exception):
     """
     Too Many Columns Found Error
@@ -12,7 +25,7 @@ class TooManyColumnsFoundError(Exception):
         super().__init__(f"\n\n{message}\n")
 
 
-def throw(e):
+def throw(e: BaseException):
     """Raises an exception
 
     Args:

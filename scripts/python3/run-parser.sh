@@ -28,7 +28,7 @@ then
 fi
 
 # Use python3 command if available, otherwise try python
-# Note: Be sure to activate the Python virtual environment before trying to
+# NOTE: Be sure to activate the Python virtual environment before trying to
 # resolve the python version
 set +e
 python_cmd=$(which python3 2> /dev/null)
@@ -45,7 +45,7 @@ fi
 # This is where we can run blocks of code via our virtual environment using node
 # The first argument is meant to be the path to the PDF
 # The second argument is meant to be the type of PDF, "checking"|"credit"|"savings"
-$python_cmd ./scripts/parse.py $1 $2 $3
+$python_cmd ./scripts/Parse.py $1 $2 $3
 # ================================
 
 echo
