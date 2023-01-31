@@ -1,3 +1,11 @@
+# -*- coding: UTF-8 -*-
+
+#
+# @copyright Copyright © 2018 - 2023 by Edward K Thomas Jr
+# @license GNU GENERAL PUBLIC LICENSE https://www.gnu.org/licenses/gpl-3.0.en.html
+#
+
+
 class IncorrectServerRequest(Exception):
     """
     The expected data attached to the upload POST request, was malformed.

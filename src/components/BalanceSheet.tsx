@@ -1,3 +1,8 @@
+/**
+ * @copyright Copyright © 2018 - 2023 by Edward K Thomas Jr
+ * @license GNU GENERAL PUBLIC LICENSE https://www.gnu.org/licenses/gpl-3.0.en.html
+ */
+
 import { memo, useEffect, useState } from "react";
 import { Button, Grid, Stack, TextField } from "@mui/material";
 import { LocalizationProvider, MobileDatePicker } from "@mui/x-date-pickers";
