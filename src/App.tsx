@@ -3,7 +3,7 @@
  * @license GNU GENERAL PUBLIC LICENSE https://www.gnu.org/licenses/gpl-3.0.en.html
  */
 
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import {
   AppBar,
   Button,
@@ -219,6 +219,10 @@ function Bar() {
 
 function Body() {
   const app = useContext();
+
+  useEffect(() => {
+    app.setBody(<TransactionPage />, PageType.Transaction);
+  }, []);
 
   return (
     <div
