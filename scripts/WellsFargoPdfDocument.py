@@ -382,7 +382,7 @@ class WellsFargoPdfDocumentBaseClass:
                 )
                 statement_date = month_to_month_elements[0].text()
                 self.rollover_year = bool(re.match(r"^12", statement_date))
-                self.rollback_year = bool(re.match(r"^[0]?1", statement_date))
+                self.rollback_year = bool(re.match(r"^[0]?1/", statement_date))
                 self.year = re.match(
                     r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]", statement_date
                 ).group(0)[-4:]
