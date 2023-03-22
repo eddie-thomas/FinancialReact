@@ -33,7 +33,7 @@ interface AppStateType extends ContextType {
 
 export const defaultValue: ContextType = {
   loggedIn: false,
-  loginDialogOpen: false,
+  loginDialogOpen: true,
 };
 
 export const Context = createContext<
