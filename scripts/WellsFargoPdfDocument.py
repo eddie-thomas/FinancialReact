@@ -43,6 +43,7 @@ class WellsFargoPdfDocumentBaseClass:
         self.column_headers = self._get_column_headers_based_on_statement_type()
         self.number_of_rows = self._tag_dated_row_data()
         self.rollover_year = False
+        self.rollback_year = False
         self.year = date.today().year
         self.show = show
 
@@ -136,7 +137,10 @@ class WellsFargoPdfDocumentBaseClass:
                 # If we have a date, make it a complete date
                 if column_header_tag in ["trans", "post", "date"]:
                     text = incomplete_date_into_complete_date(
-                        row_element.text(), self.year, self.rollover_year
+                        row_element.text(),
+                        self.year,
+                        self.rollover_year,
+                        self.rollback_year,
                     )
                     return {column_header_tag: text}
                 return {column_header_tag: row_element.text()}
@@ -354,6 +358,9 @@ class WellsFargoPdfDocumentBaseClass:
                     self.rollover_year = bool(
                         re.match(r"^december", statement_date, re.IGNORECASE)
                     )
+                    self.rollback_year = bool(
+                        re.match(r"^january", statement_date, re.IGNORECASE)
+                    )
                     self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[
                         -4:
                     ]
@@ -361,6 +368,9 @@ class WellsFargoPdfDocumentBaseClass:
                     statement_date = self.parsed_document.elements[2].text()
                     self.rollover_year = bool(
                         re.match(r"^december", statement_date, re.IGNORECASE)
+                    )
+                    self.rollback_year = bool(
+                        re.match(r"^january", statement_date, re.IGNORECASE)
                     )
                     self.year = re.match(r".*20[0-5][0-9]", statement_date).group(0)[
                         -4:
@@ -372,6 +382,7 @@ class WellsFargoPdfDocumentBaseClass:
                 )
                 statement_date = month_to_month_elements[0].text()
                 self.rollover_year = bool(re.match(r"^12", statement_date))
+                self.rollback_year = bool(re.match(r"^[0]?1", statement_date))
                 self.year = re.match(
                     r"^[0-1]?[0-9]/[0-3]?[0-9]/20[0-5][0-9]", statement_date
                 ).group(0)[-4:]
@@ -466,7 +477,7 @@ class WellsFargoPdfDocumentBaseClass:
 
 
 def incomplete_date_into_complete_date(
-    incomplete_date: str, year: str | int, rollover_year: bool
+    incomplete_date: str, year: str | int, rollover_year: bool, rollback_year: bool
 ):
     """Turn the incomplete dates from transactions into full dates that can be
     parsed, either by the `datetime` library, or JavaScript's `Date` object.
@@ -474,8 +485,10 @@ def incomplete_date_into_complete_date(
     Args:
         incomplete_date (str): The incomplete date
         year (str|int): The beginning year of the transaction
-        rollover_year (bool): Boolean stating whether this is a roll over year or now. If so,
+        rollover_year (bool): Boolean stating whether this is a roll over year or not. If so,
             use the next year for all of January's dates
+        rollback_year (bool): Boolean stating whether this is a roll back year or not. If so,
+            use the previous year for all of December's dates
 
     Returns:
         String representing the complete date
@@ -485,7 +498,13 @@ def incomplete_date_into_complete_date(
         [month, day] = incomplete_date.split("/")
         int_month = int(month)
         int_day = int(day)
-        int_year = int(year) + 1 if (rollover_year and int_month == 1) else int(year)
+        int_year = (
+            int(year) + 1
+            if (rollover_year and int_month == 1)
+            else int(year) - 1
+            if (rollback_year and int_month == 12)
+            else int(year)
+        )
 
         return f"{int_month:02d}/{int_day:02d}/{int_year}"
     except BaseException as e:

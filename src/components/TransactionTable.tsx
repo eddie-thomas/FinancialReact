@@ -3,9 +3,11 @@
  * @license GNU GENERAL PUBLIC LICENSE https://www.gnu.org/licenses/gpl-3.0.en.html
  */
 
-import { memo, useEffect, useState } from "react";
+import { ChangeEvent, memo, useEffect, useState } from "react";
 import {
   Box,
+  Collapse,
+  IconButton,
   Paper,
   styled,
   Table,
@@ -14,8 +16,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from "@mui/material";
+import ManageSearchIcon from "@mui/icons-material/ManageSearch";
 import {
   aggregateAmounts,
   concatenateAccountTransactions,
@@ -55,17 +59,37 @@ const StyledFooterContainer = styled(Box)(({ theme }) => ({
     marginRight: theme.spacing(1),
     fontFamily: "Courier",
   },
+  "& .MuiBox-root": {
+    display: "inline-flex",
+    borderRight: "1px solid #000",
+    paddingRight: theme.spacing(1),
+    marginRight: theme.spacing(1),
+    justifyContent: "right",
+  },
   b: { whiteSpace: "pre", marginRight: theme.spacing(1) },
 }));
 
 function TransactionTable({ account }: TransactionTableProps) {
   const [data, setData] = useState<Transactions | undefined>();
+  const [regex, setRegex] = useState<string>();
 
   const { data: concatTransactions, titles } = concatenateAccountTransactions({
     account,
     data: data || [],
   });
-  const { balance, expense, revenue } = aggregateAmounts(concatTransactions);
+  const regExpFilterConcatenatedTransactions = concatTransactions.filter(
+    (row) => {
+      if (!regex) return true;
+      const regexp = new RegExp(regex, "i");
+      return titles.find((title) => {
+        const value = row[title];
+        return regexp.test(value);
+      });
+    }
+  );
+  const { balance, expense, revenue } = aggregateAmounts(
+    regExpFilterConcatenatedTransactions
+  );
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -86,6 +110,7 @@ function TransactionTable({ account }: TransactionTableProps) {
   return (
     <StyledPaper>
       <StyledFooterContainer>
+        <RegExpSearch onRegex={setRegex} />
         <Typography>
           Revenue:&nbsp;<b>{revenue.padStart(10, " ")}</b>
         </Typography>
@@ -131,7 +156,7 @@ function TransactionTable({ account }: TransactionTableProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {concatTransactions.map((row) => {
+            {regExpFilterConcatenatedTransactions.map((row) => {
               return (
                 <TableRow hover tabIndex={-1} key={JSON.stringify(row)}>
                   {titles.map((title) => {
@@ -152,5 +177,47 @@ function TransactionTable({ account }: TransactionTableProps) {
         </Table>
       </TableContainer>
     </StyledPaper>
+  );
+}
+
+function RegExpSearch({
+  onRegex,
+}: {
+  onRegex: React.Dispatch<React.SetStateAction<string | undefined>>;
+}) {
+  const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [error, setError] = useState<boolean>(false);
+
+  const handleInChange = () => {
+    setCollapsed((prev) => !prev);
+  };
+
+  const handleTextFieldChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value || undefined;
+    const regExp = value?.replaceAll("\\", "\\\\");
+    try {
+      regExp && new RegExp(regExp);
+      onRegex(regExp);
+      setError(false);
+    } catch (err) {
+      setError(true);
+    }
+  };
+
+  return (
+    <Box>
+      <Collapse in={collapsed} orientation="horizontal">
+        <TextField
+          error={error}
+          fullWidth
+          placeholder="Enter RegExp for Filtering"
+          variant="standard"
+          onChange={handleTextFieldChange}
+        />
+      </Collapse>
+      <IconButton onClick={handleInChange}>
+        <ManageSearchIcon />
+      </IconButton>
+    </Box>
   );
 }
